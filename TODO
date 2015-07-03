@@ -1,0 +1,8 @@
+- unit tests
+- fix references
+- polish documentation
+- examples for quantiles.R functions
+- p.value / confidence interval calculation everywhere
+- polish print.ahr, print.survQuantile, print.rmd
+- separate examples from code -> extra files
+- remove wlr.R
