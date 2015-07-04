@@ -261,6 +261,9 @@ print.survQuantile <- function(x, digits=3, ...) {
         cat("Estimates:\n")
         print(x$estimate, ...)
     }
+
+    cat("\n")
+    
     if(!is.null(x$conf.int)) {
         cat(format(100 * attr(x$conf.int, "conf.level")),
             " percent confidence interval:\n", " ",

@@ -33,7 +33,7 @@ ajLogCovCIF <- function(times, fit, target=2, n) {
 
     res <- rlm + t(rlm)
     diag(res) <- diag(rlm)
-    n * res
+    res
 }
 
 #' Aalen-Johansen estimator (empirical transition matrix)
@@ -43,7 +43,7 @@ ajLogCovCIF <- function(times, fit, target=2, n) {
 #' @title aj
 #' @param times a vector of evaluation times
 #' @param data data frame (see \code{\link{etm}} function documentation)
-#' @param param list of parameters (target, states, transitions, censoring, s, t, covariance) (see \link{etm} documentation)
+#' @param param list of parameters (target, states, transitions, censoring, s, t, cov) (see \link{etm} documentation)
 #' @return a list containing
 #'  \item{times}{the argument \code{times} passed to the function}
 #'  \item{S}{vector of 1 minus transition probabilities at \code{times} (one for each element of \code{times})}

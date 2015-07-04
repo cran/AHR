@@ -13,33 +13,38 @@ using namespace Rcpp;
 
 SEXP R_fastkm(SEXP X, SEXP D, SEXP V, SEXP left, SEXP Q)
 {
-  NumericVector xX(X);
-  NumericVector xV(V);
-  IntegerVector xD(D);
-
-  bool ll = as<bool>(left);
- 
-  vector<double> sX(xX.begin(), xX.end());
-  vector<double> sV(xV.begin(), xV.end());
-  vector<int> sD(xD.begin(), xD.end());
-
-  ProductLimit pl(sX, sD, sV, false);
-  
   List result;
-  if(Q == R_NilValue) {
-    result = List::create(Named("time") = pl.getTime(),
-			  Named("surv") = pl.getSurv(),
-			  Named("variance") = pl.getVarHazard(),
-			  Named("n.atrisk") = pl.getNAtRisk());
-  } else {
-    NumericVector xQ(Q);
-    vector<double> sQ(xQ.begin(), xQ.end());
-    ProdlimEval x = pl.eval(sQ, ll);
-    result = List::create(Named("time") = sQ,
-			  Named("surv") = x.surv,
-			  Named("variance") = x.var,
-			  Named("n.atrisk") = x.natrisk);
-  }
+  
+  try {
+    NumericVector xX(X);
+    NumericVector xV(V);
+    IntegerVector xD(D);
+    
+    bool ll = as<bool>(left);
+    
+    vector<double> sX(xX.begin(), xX.end());
+    vector<double> sV(xV.begin(), xV.end());
+    vector<int> sD(xD.begin(), xD.end());
+    
+    ProductLimit pl(sX, sD, sV, false);
+    
+    if(Q == R_NilValue) {
+      result = List::create(Named("time") = pl.getTime(),
+			    Named("surv") = pl.getSurv(),
+			    Named("variance") = pl.getVarHazard(),
+			    Named("n.atrisk") = pl.getNAtRisk());
+    } else {
+      NumericVector xQ(Q);
+      vector<double> sQ(xQ.begin(), xQ.end());
+      ProdlimEval x = pl.eval(sQ, ll);
+      result = List::create(Named("time") = sQ,
+			    Named("surv") = x.surv,
+			    Named("variance") = x.var,
+			    Named("n.atrisk") = x.natrisk);
+    }
+  } catch(std::exception &ex) {	
+    forward_exception_to_r(ex);
+  } 
 
   return result;
 }
@@ -127,7 +132,6 @@ ProdlimEval ProductLimit::eval(const vector<double>& Y, bool left_limit)
       }
     }
   } else {
-    
     for (int i = 0; i < n; ++i) {  // right-continuous piecewise constant interpolation
       if (Y[i] < mTime[0]) {
 	res[i] = 1;
@@ -208,49 +212,55 @@ void ProductLimit::surv(const vector<pair<double, int> >& data, const vector<int
   int s = 0;
   int event = data[0].second;
   int loss = 1 - data[0].second;
-  int stop = data.size();
+  int n = data.size();
   double surv_temp = 1;
   double hazard_temp = 0;
   double varhazard_temp = 0;
 
-  for (int i = 1; i <= stop; i++) {
-    double y0 = data[i-1].first;
-    double y1 = data[i].first;
-    double status = data[i].second;
-
-    int atrisk = atrisk_all[i-1];
-
-    if (y0 == y1 && i < stop) {
-      event += status;
-      loss  += (1 - status);
-    } else {
-      mTime[s] = y0;
-
-      if (reverse) {
-	if (loss > 0 && atrisk > trunc) {
-	  hazard_temp = loss / (double) (atrisk - event);
-	  surv_temp *= (1 - hazard_temp);
-	  varhazard_temp += (double) loss / ((double) (atrisk - event) * (double) (atrisk - event - loss));
-	}
-      } else {
-	if (event > 0 && atrisk > trunc) {
-	  hazard_temp = event / (double) atrisk;
-	  surv_temp *= (1 - hazard_temp);
-	  varhazard_temp += (double) event / ((double) atrisk * (double) (atrisk - event));
-	}
-      }
+  double y0 = 0;
+  double y1 = 0;
+  double status = 0;
+  
+  for (int i = 0; i < n; i++) {
+    y0 = data[i].first;
+    int atrisk = atrisk_all[i];
+    
+    if(i < n-1) { // look at next element -> tie handling
+      status = data[i+1].second;
       
-      mHazard[s] = hazard_temp;
-      mVarhazard[s] = varhazard_temp;
-      mSurv[s] = surv_temp;
-      mNatrisk[s] = atrisk;
-
-      if (i < stop) {
-	//atrisk -= (event + loss);
-	s++;
-	event = status;
-	loss = (1 - status);
+      if (y0 == data[i+1].first) { // handle ties
+	event += status;
+	loss  += (1 - status);
+	continue;
+      }    
+    }
+    
+    mTime[s] = y0;
+    
+    if (reverse) {
+      if (loss > 0 && atrisk > trunc) {
+	hazard_temp = loss / (double) (atrisk - event);
+	surv_temp *= (1 - hazard_temp);
+	varhazard_temp += (double) loss / ((double) (atrisk - event) * (double) (atrisk - event - loss));
       }
+    } else {	
+      if (event > 0 && atrisk > trunc) {
+	hazard_temp = event / (double) atrisk;
+	surv_temp *= (1 - hazard_temp);
+	varhazard_temp += (double) event / ((double) atrisk * (double) (atrisk - event));
+      }
+    }
+    
+    mHazard[s] = hazard_temp;
+    mVarhazard[s] = varhazard_temp;
+    mSurv[s] = surv_temp;
+    mNatrisk[s] = atrisk;
+    
+    //atrisk -= (event + loss);
+    if(i < n-1) {
+      s++;
+      event = status;
+      loss = (1 - status);
     }
   }
 }

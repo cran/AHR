@@ -24,7 +24,7 @@
 #' fit <- survfit(Surv(Y, D) ~ 1)
 #' f <- approxfun(fit$time, fit$surv, f=0, rule=2, yleft=1)
 #' f(fit$time)
-fastkm <- function(time, status, ltrunc=rep.int(0, length(time)), left.limit=FALSE, eval=time) {
+fastkm <- function(time, status, ltrunc=rep.int(0, length(time)), left.limit=FALSE, eval=time) {    
     df <- data.frame(time=time, status=status, ltrunc=ltrunc)
     df <- df[order(df$time), ]
     .Call("R_fastkm", df$time, df$status, df$ltrunc, left.limit, eval, PACKAGE="AHR")

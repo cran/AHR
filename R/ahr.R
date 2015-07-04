@@ -438,7 +438,7 @@ logHR <- function(ahr.obj, null.hr=1, contrast=NULL) {
 
             J2 <- diag(loghr)
             cov.hr <-  J2 %*% cov.loghr %*% J2
-            Z.loghr <- sum(solve(cov.loghr, loghr - null.loghr) * (loghr - null.loghr))  ## asympt. chi^2 distribution with k-1 degrees of freedom
+            Z.hr <- sum(solve(cov.hr, hr - null.hr) * (hr - null.hr))  ## asympt. chi^2 distribution with k-1 degrees of freedom
         }       
 
         res$Z.loghr <- Z.loghr

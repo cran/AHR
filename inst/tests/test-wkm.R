@@ -49,7 +49,7 @@ test_that("covariance matrix is symmetric", {
   
     data <- data.frame(Y=Y, D=D, W=X, V=V)
     
-    expect_true(isSymmetric(wkm(sort(Y), formula=Surv(V, Y, D) ~ strata(W), data=data)$COV))
+    expect_true(isSymmetric(wkm(sort(Y), formula=Surv(V, Y, D) ~ strata(W), data=data, param=list(cov=TRUE, var=TRUE, start=0, alpha=1, left.limit=FALSE))$COV))
 })
 
 test_that("variance and covariance calculations match", {
@@ -65,8 +65,8 @@ test_that("variance and covariance calculations match", {
 
     times <- sort(data$Y[data$D == 1])
     
-    fit <- wkm(times, formula=Surv(Y, D) ~ strata(W), data=data, param=list(cov=TRUE, var=FALSE, start=0, alpha=1))
-    fit2 <- wkm(times, formula=Surv(Y, D) ~ strata(W), data=data, param=list(cov=FALSE, var=TRUE, start=0, alpha=1))
+    fit <- wkm(times, formula=Surv(Y, D) ~ strata(W), data=data, param=list(cov=TRUE, var=FALSE, start=0, alpha=1, left.limit=FALSE))
+    fit2 <- wkm(times, formula=Surv(Y, D) ~ strata(W), data=data, param=list(cov=FALSE, var=TRUE, start=0, alpha=1, left.limit=FALSE))
     
     expect_true(all.equal(diag(fit$COV), fit2$V))
 })

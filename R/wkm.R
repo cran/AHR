@@ -22,11 +22,14 @@
 #' @export
 wkm <- function(times, data, param=list(start=0, alpha=1, var=TRUE, cov=FALSE, left.limit=FALSE), formula=NULL) {
 
-    start <- param$start
-    alpha <- param$alpha    
-    var <- param$var
-    cov  <- param$cov   
-    left.limit <- param$left.limit
+    if(is.null(param)) param <- list(start=0, alpha=1, var=TRUE, cov=FALSE, left.limit=FALSE)
+    else {
+        start <- param$start
+        alpha <- param$alpha    
+        var <- param$var
+        cov  <- param$cov   
+        left.limit <- param$left.limit
+    }
     
     if(!is.null(formula)) data <- parseFormula(formula, data, one.sample=TRUE)
     ## if is.null(formula) assume that the variables in data are named V,Y,D,W
