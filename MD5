@@ -1,14 +1,13 @@
-1ab7e9c91dee2e88963aba7bba61782f *DESCRIPTION
+bac78a49b79e9afc655e3b6df9c6b91c *DESCRIPTION
 75602ee00b30d109cfe316167ef1b9f1 *NAMESPACE
-fd0dafadecc132967e9eb43fd57a3b16 *R/AHR-package.R
-49e88de511e405726c6f30eb5ea333f5 *R/ahr.R
+2e1138c3dc63a9234e06a9ab6f02bdbf *R/AHR-package.R
+42822249558a4530eb40bc5e65d58168 *R/ahr.R
 6f0f9c0b8ab098a0867c1a1bad2d7378 *R/aj.R
 3e35aee0a923659313a3e55d5ce76866 *R/fastkm.R
 ce2400244a3d6d808ff88fda79576cad *R/quantiles.R
 ab51cd4ed672615554b4527ff15b78dd *R/rmean.R
-1b8bf1f181ef911c13062cff8512bc8a *R/util.R
+be0ddf3cdf86b09db40358bebcfb07d2 *R/util.R
 72b5bc2226c189026925acb86f86bb19 *R/wkm.R
-7cc0519b6a247affd7cadb19ce04a04e *TODO
 e1960f5f69288b93ba3a61ad5a7046d5 *inst/tests/test-ahr.R
 ab2a42fe950fb513d02438cc5f0ccdf8 *inst/tests/test-aj.R
 eee0e4c8035dfd3cabab5810aedc4c83 *inst/tests/test-fastkm.R
@@ -30,5 +29,5 @@ dbf6d08ab2d90569949c8c06debc4f2a *man/wkmCompareQuantiles.Rd
 b7d731fbbb313afbabcadd384a2a2f9d *man/wkmQuantile.Rd
 dcb4acf52a1092996bcf99156c164b7a *src/Makevars
 606d64fa561f1000382ce9d3113456ea *src/Makevars.win
-be73e7945a29a78e68e6d5c43475a651 *src/prodlim.cpp
+ce1f3fb8377ab6272c9f67a33271c762 *src/prodlim.cpp
 1bfbde49c10f2e635ba92693c2f1109a *src/prodlim.h

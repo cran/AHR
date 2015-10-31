@@ -1,7 +1,7 @@
 ## \int f(x)dg(x) with step functions f,g
 ## integral reduces to finite sum over all jump times
 stepIntegrate <- function(f, g) {
-    f[is.nan(f)] <- 0
+    ##f[is.nan(f)] <- 0
     sum(f * (g - c(1, g[-length(g)])))
 }
 

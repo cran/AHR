@@ -218,7 +218,6 @@ void ProductLimit::surv(const vector<pair<double, int> >& data, const vector<int
   double varhazard_temp = 0;
 
   double y0 = 0;
-  double y1 = 0;
   double status = 0;
   
   for (int i = 0; i < n; i++) {

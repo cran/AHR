@@ -58,9 +58,9 @@ avgHR <- function(L, data, method="km", ...) {
 ahrWKM <- function(L, formula, data, null.theta=NULL, contrast=NULL, multi.test=FALSE, cov=TRUE, bootstrap=0, start=0, alpha=1, left.limit=FALSE) {
     if(!is.null(formula)) data <- parseFormula(formula, data)
     
-    wkm.param <- list(alpha=alpha, start=start, var=cov, cov=FALSE, left.limit=left.limit)
-    
-    fit <- ahrSurv(L, data, null.theta, contrast, multi.test, cov, bootstrap, wkm, wkm.param, TRUE)
+    wkm.param <- list(alpha=alpha, start=start, var=cov, cov=cov & (start != 0), left.limit=left.limit)
+
+    fit <- ahrSurv(L, data, null.theta, contrast, multi.test, cov, bootstrap, wkm, wkm.param, start == 0)
     fit <- c(fit, logHR(fit))
     class(fit) <- "ahr"
     fit
@@ -318,9 +318,15 @@ ahrFit <- function(data, L, cov, surv.fit.fun, surv.fit.param, log.iis=FALSE) {
     }
 
     p <- n / sum(n)
+
+    tmp <- lapply(1:k, function(i) fit[[i]]$S)
     
-    G <- exp(rowSums(log(sapply(1:k, function(i) fit[[i]]$S))))
-    x <- sapply(1:(k-1), function(i) stepIntegrate(G / fit[[i]]$S, fit[[i]]$S))
+    ## dummy to ensure length(tmp[-l]) > 1
+    tmp[[k+1]] <- rep.int(1, n.times)
+    
+    xi <- sapply(1:k, function(l) do.call("*", tmp[-l]))
+    G <- xi[,k] * fit[[k]]$S                
+    x <- sapply(1:(k-1), function(i) stepIntegrate(xi[,i], fit[[i]]$S))
     
     theta <- -x / (1 - G[n.times])
     theta[k] <- 1 - sum(theta)
@@ -330,13 +336,13 @@ ahrFit <- function(data, L, cov, surv.fit.fun, surv.fit.param, log.iis=FALSE) {
     class(ahr.obj) <- "ahr"
     
     ahr.obj$theta <- theta    
-    if(cov) ahr.obj$cov.theta <- ahrVar(theta, G, times, p, fit, log.iis) / sum(n)
+    if(cov) ahr.obj$cov.theta <- ahrVar(theta, G, xi, times, p, fit, log.iis) / sum(n)
 
     ahr.obj
 }
 
 ## INTERNAL
-ahrVar <- function(theta, G, times, p, fit, log.iis=FALSE) {
+ahrVar <- function(theta, G, xi, times, p, fit, log.iis=FALSE) {
     k <- length(fit)
     GL <- G[length(G)]
     n.times <- length(times)
@@ -345,21 +351,21 @@ ahrVar <- function(theta, G, times, p, fit, log.iis=FALSE) {
     ## logCOV = COV / S
     ## COV == 0 <=> S = 0
     get.A <- function(i, j) {
-        if(log.iis) ft <- G * fit[[i]]$logV / fit[[j]]$S
-        else ft <- G * fit[[i]]$logCOV[ , ncol(fit[[i]]$logCOV)] / fit[[j]]$S
+        if(log.iis) ft <- xi[,j] * fit[[i]]$logV
+        else ft <- xi[,j] * fit[[i]]$logCOV[ , ncol(fit[[i]]$logCOV)]
         GL * stepIntegrate(ft, fit[[j]]$S) / p[i]
     }
     
-    get.B <- function(i, j, k) {
+    get.B <- function(i, j, kk) {
         Sj <- fit[[j]]$S
         if(log.iis) {
             logV <- fit[[i]]$logV
-            tmp <- simplify2array(lapply(snt, function(l) stepIntegrate(G * logV[pmin(snt, l)] / Sj, Sj)))
+            tmp <- simplify2array(lapply(snt, function(l) stepIntegrate(xi[,j] * logV[pmin(snt, l)], Sj)))
         } else {
             logCOV <- fit[[i]]$logCOV
-            tmp <- simplify2array(lapply(snt, function(l) stepIntegrate(G * logCOV[, l] / Sj, Sj)))
+            tmp <- simplify2array(lapply(snt, function(l) stepIntegrate(xi[,j] * logCOV[, l], Sj)))
         }
-        stepIntegrate(G * tmp / fit[[k]]$S, fit[[k]]$S) / p[i]
+        stepIntegrate(xi[,kk] * tmp, fit[[kk]]$S) / p[i]
     }
     
     get.C <- function(i) {
@@ -405,7 +411,7 @@ ahrVar <- function(theta, G, times, p, fit, log.iis=FALSE) {
     ## must be zero:
     ##print(rowSums(Sigma))
     ##print(colSums(Sigma))
-
+    
     Sigma / (1 - GL)^2
 }
 
