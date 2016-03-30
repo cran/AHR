@@ -32,12 +32,12 @@ avgHR <- function(L, data, method="km", ...) {
 #' @param data data frame containing the variables in formula
 #' @param null.theta vector specifying the null hypothesis for the average hazard ratios (H_0: theta = null.theta)
 #' @param contrast vector of contrasts to test H_0: contrast * (theta - null.theta) = 0
-#' @param start time of interim analysis (estimation of response rates is based only on data accruing after time 'start')
-#' @param alpha exponent of the weight function
-#' @param left.limit if TRUE use left-continuous interpolation of WKM estimates instead of right-continuous interpolation
 #' @param multi.test calculate multivariate test statistic if TRUE
 #' @param cov if TRUE calculate covariance matrix estimator (direct)
 #' @param bootstrap if > 0 then use bootstrap to estimate covariance matrix (ignore if cov is TRUE)
+#' @param alpha exponent of the weight function
+#' @param left.limit if TRUE use left-continuous interpolation of WKM estimates instead of right-continuous interpolation
+#' @param rr.subset logical vector defining subset of observations to use for response rate estimation (default: use all observations)
 #' @return An object of class '"ahr"'
 #' @references J.~D. Kalbfleisch and R.~L. Prentice. Estimation of the average hazard ratio. \emph{Biometrika}, 68(1):105--112, Apr. 1981.
 #' @export
@@ -55,12 +55,12 @@ avgHR <- function(L, data, method="km", ...) {
 #' \dontrun{fitBS <- ahrWKM(2, Surv(Y, D) ~ Z, data.frame(Y=Y, D=D, Z=Z), cov=FALSE,
 #'                          bootstrap=1000)}
 #' 
-ahrWKM <- function(L, formula, data, null.theta=NULL, contrast=NULL, multi.test=FALSE, cov=TRUE, bootstrap=0, start=0, alpha=1, left.limit=FALSE) {
+ahrWKM <- function(L, formula, data, null.theta=NULL, contrast=NULL, multi.test=FALSE, cov=TRUE, bootstrap=0, alpha=1, left.limit=FALSE, rr.subset=rep(TRUE, nrow(data))) {
     if(!is.null(formula)) data <- parseFormula(formula, data)
     
-    wkm.param <- list(alpha=alpha, start=start, var=cov, cov=cov & (start != 0), left.limit=left.limit)
+    wkm.param <- list(alpha=alpha, var=cov, cov=cov, left.limit=left.limit, rr.subset=rr.subset)
 
-    fit <- ahrSurv(L, data, null.theta, contrast, multi.test, cov, bootstrap, wkm, wkm.param, start == 0)
+    fit <- ahrSurv(L, data, null.theta, contrast, multi.test, cov, bootstrap, wkm, wkm.param)
     fit <- c(fit, logHR(fit))
     class(fit) <- "ahr"
     fit
@@ -74,10 +74,10 @@ ahrWKM <- function(L, formula, data, null.theta=NULL, contrast=NULL, multi.test=
 #' @param data data frame containing the variables in formula
 #' @param null.theta vector specifying the null hypothesis for the average hazard ratios (H_0: theta = null.theta)
 #' @param contrast vector of contrasts to test H_0: contrast * (theta - null.theta) = 0
-#' @param left.limit if TRUE use left-continuous interpolation of WKM estimates
 #' @param multi.test calculate multivariate test statistic if TRUE
 #' @param cov if TRUE calculate covariance matrix estimator (direct)
 #' @param bootstrap if > 0 then use bootstrap to estimate covariance matrix (ignore if cov is TRUE)
+#' @param left.limit if TRUE use left-continuous interpolation of WKM estimates
 #' @return An object of class '"ahr"'
 #' @references  J.~D. Kalbfleisch and R.~L. Prentice. Estimation of the average hazard ratio. \emph{Biometrika}, 68(1):105--112, Apr. 1981.
 #' @export
@@ -97,7 +97,7 @@ ahrWKM <- function(L, formula, data, null.theta=NULL, contrast=NULL, multi.test=
 ahrKM <- function(L, formula, data, null.theta=NULL, contrast=NULL, multi.test=FALSE, cov=TRUE, bootstrap=0, left.limit=FALSE) {
     if(!is.null(formula)) data <- parseFormula(formula, data)
     
-    wkm.param <- list(alpha=1, start=0, var=cov, cov=FALSE, left.limit=left.limit)
+    wkm.param <- list(alpha=1, var=cov, cov=FALSE, left.limit=left.limit, rr.subset=rep(TRUE, nrow(data)))
     
     fit <- ahrSurv(L, data, null.theta, contrast, multi.test, cov, bootstrap, wkm, wkm.param, TRUE)
     fit <- c(fit, logHR(fit))
@@ -208,21 +208,21 @@ print.ahr <- function(x, digits=3, ...) {
     invisible(x)
 }
 
-# INTERNAL
-#
-# title ahrSurv
-# param data data frame containing the variables
-# param L time-limit specifying time-interval [0,L] over which average hazard ratios will be calculated
-# param null.theta vector specifying the null hypothesis for the average hazard ratios
-# param contrast vector of contrasts to test H_0: contrast * (theta - null.theta) = 0
-# param multi.test calculate multivariate test statistic if TRUE
-# param cov if TRUE calculate asymptotic covariance matrix estimator (direct estimation)
-# param bootstrap if > 0 then use bootstrap to estimate covariance matrix (ignored if cov is TRUE)
-# param surv.fit.fun function which calculates survival function from data
-# param surv.fit.param list of parameters passed to surv.fit.fun
-# param log.iis asymptotic covariance function of logarithm of survival function has independent increments structure (TRUE for (weighted) Kaplan-Meier estimator, FALSE for Aalen-Johansen estimator)
-# return an object of class '"ahr"'
-ahrSurv <- function(L, data, null.theta=NULL, contrast=NULL, multi.test=FALSE, cov=TRUE, bootstrap=0, surv.fit.fun=wkm, surv.fit.param=list(alpha=1, start=0, cov=TRUE), log.iis=FALSE) {
+## INTERNAL
+##
+## title ahrSurv
+## param data data frame containing the variables
+## param L time-limit specifying time-interval [0,L] over which average hazard ratios will be calculated
+## param null.theta vector specifying the null hypothesis for the average hazard ratios
+## param contrast vector of contrasts to test H_0: contrast * (theta - null.theta) = 0
+## param multi.test calculate multivariate test statistic if TRUE
+## param cov if TRUE calculate asymptotic covariance matrix estimator (direct estimation)
+## param bootstrap if > 0 then use bootstrap to estimate covariance matrix (ignored if cov is TRUE)
+## param surv.fit.fun function which calculates survival function from data
+## param surv.fit.param list of parameters passed to surv.fit.fun
+## param log.iis asymptotic covariance function of logarithm of survival function has independent increments structure (TRUE for (weighted) Kaplan-Meier estimator, FALSE for Aalen-Johansen estimator)
+## return an object of class '"ahr"'
+ahrSurv <- function(L, data, null.theta=NULL, contrast=NULL, multi.test=FALSE, cov=TRUE, bootstrap=0, surv.fit.fun=wkm, surv.fit.param=list(alpha=1, cov=TRUE), log.iis=FALSE) {
     
     ahr.obj <- ahrFit(data, L, cov, surv.fit.fun, surv.fit.param, log.iis)
 
@@ -310,11 +310,17 @@ ahrFit <- function(data, L, cov, surv.fit.fun, surv.fit.param, log.iis=FALSE) {
     n <- NULL
     fit <- list()
 
+    trt.sub <- data$Trt[surv.fit.param$rr.subset]
+    
     ## estimate transition probabilities in each treatment group
     for(i in grps) {
         cur.data <- data[data$Trt == i,]
+
+        par <- surv.fit.param
+        par$rr.subset <- surv.fit.param$rr.subset[trt.sub == i]
+        
         n <- c(n, nrow(cur.data))
-        fit[[length(fit)+1]] <- surv.fit.fun(times, cur.data, surv.fit.param)
+        fit[[length(fit)+1]] <- surv.fit.fun(times, cur.data, par)
     }
 
     p <- n / sum(n)
@@ -324,7 +330,7 @@ ahrFit <- function(data, L, cov, surv.fit.fun, surv.fit.param, log.iis=FALSE) {
     ## dummy to ensure length(tmp[-l]) > 1
     tmp[[k+1]] <- rep.int(1, n.times)
     
-    xi <- sapply(1:k, function(l) do.call("*", tmp[-l]))
+    xi <- sapply(1:k, function(l) do.call(function(...) mapply(prod, ...), tmp[-l]))
     G <- xi[,k] * fit[[k]]$S                
     x <- sapply(1:(k-1), function(i) stepIntegrate(xi[,i], fit[[i]]$S))
     

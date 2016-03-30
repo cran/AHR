@@ -2,38 +2,36 @@
 #'
 #' @title wkm
 #' @param times a vector of evaluation times
-#' @param data data frame containing the variables in formula
+#' @param data data frame containing the variables in formula (if is.null(formula) expected column names are: Y (time), D (status), W (strat. factor), V (left-truncation times))
 #' @param param list of parameters containing:
-#' start: time of interim analysis (estimation of response rates is based only on data accruing after time 'start'), only if recruitment times are supplied (vector R in data) (default=0)
 #' alpha: fractional parameter (default=1)
 #' var: if TRUE (default) calculate variance estimate
 #' cov: if FALSE (default) do not calculate covariance matrix estimate
 #' left.limit: if TRUE calculate left-continuous estimates, else calculate right-continuous estimates
+#' rr.subset: logical vector defining subset of observations to use for response rate estimation (default: use all observations)
 #' @param formula an object of class '"formula"' specifying the conditional survival model (only discrete covariates supported)
 #' @return an object of class '"wkm"'
 #' @details This function calculates the weighted Kaplan-Meier estimator for the survival function with weights based on a discrete time-independent covariate as described in Murray/Tsiatis (1996).
 #' The survival probabilities are evaluated at each entry in the vector \code{times}. The data frame \code{data} must either contain the variable in \code{formula} or, if \code{formula} is \code{NULL},
-#' the variables \code{V} (left-truncation time), \code{Y} (censored failure time), \code{D} (censoring indicator), \code{W} (stratification variable) and optionally \code{R} (recruitment time).
+#' the variables \code{V} (left-truncation time), \code{Y} (censored failure time), \code{D} (censoring indicator), \code{W} (stratification variable).
 #' If \code{var} is \code{TRUE} then an estimate of the asmyptotic variance is calculated for each entry in vector \code{times}. If \code{cov} is \code{TRUE} then the \code{n x n} asymptotic
 #' covariance matrix is estimated, where \code{n} is the length of vector \code{times}. If \code{left.limit} is \code{TRUE} then a left-continuous estimate of the survival function is calculated instead
-#' of a right-continuous estimate (default). If recruitment times are supplied in \code{data} as a variable named \code{R} then the weights are estimated using observations from patients recruited after
-#' calendar time \code{start} only.
+#' of a right-continuous estimate (default). If a logical vector \code{rr.subset} is supplied, then only a subset of observations is used to estimate the response rates.
 #' @references S.~Murray and A.~A. Tsiatis. Nonparametric survival estimation using prognostic longitudinal covariates. \emph{Biometrics}, 52(1):137--151, Mar. 1996.
 #' @export
-wkm <- function(times, data, param=list(start=0, alpha=1, var=TRUE, cov=FALSE, left.limit=FALSE), formula=NULL) {
+wkm <- function(times, data, param=list(alpha=1, var=TRUE, cov=FALSE, left.limit=FALSE, rr.subset=rep(TRUE, nrow(data))), formula=NULL) {
 
-    if(is.null(param)) param <- list(start=0, alpha=1, var=TRUE, cov=FALSE, left.limit=FALSE)
-    else {
-        start <- param$start
-        alpha <- param$alpha    
-        var <- param$var
-        cov  <- param$cov   
-        left.limit <- param$left.limit
-    }
+    if(is.null(param)) param <- list(alpha=1, var=TRUE, cov=FALSE, left.limit=FALSE, rr.subset=rep(TRUE, nrow(data)))
+
+    alpha <- param$alpha    
+    var <- param$var
+    cov  <- param$cov   
+    left.limit <- param$left.limit
+    rr.subset <- param$rr.subset    
     
     if(!is.null(formula)) data <- parseFormula(formula, data, one.sample=TRUE)
     ## if is.null(formula) assume that the variables in data are named V,Y,D,W
-
+    
     strata <- levels(factor(data$W))
     n.strata <- length(strata)
 
@@ -60,12 +58,12 @@ wkm <- function(times, data, param=list(start=0, alpha=1, var=TRUE, cov=FALSE, l
         logCOV <- NULL
     }
 
-    ## second stage data (if start=0, then data2 == data)
-    if(!is.null(data$R)) data2 <- data[data$R >= start, ]
-    else data2 <- data
-
     ## set left-truncation times to 0 if not supplied by user
     if(is.null(data$V)) data$V <- rep.int(0, n)
+
+    ## estimate response rates only from subset
+    if(!is.null(param$rr.subset)) data2 <- data[rr.subset, ]
+    else data2 <- data
     
     for(s in 1:n.strata) {
         s.data <- data[data$W == strata[s], ]
@@ -84,9 +82,9 @@ wkm <- function(times, data, param=list(start=0, alpha=1, var=TRUE, cov=FALSE, l
         P[s] <- p
         
         fs <- fit$surv
-        tfs <- p * fs
+        pfs <- p * fs
 
-        S <- S + tfs
+        S <- S + pfs
         
         ## fit$variance (Greenwood) is variance of -log(\hat{S}), but we need variance of -\sqrt{ns}log(\hat{S})
         fvar <- fit$variance * nrow(s.data)
@@ -99,11 +97,11 @@ wkm <- function(times, data, param=list(start=0, alpha=1, var=TRUE, cov=FALSE, l
 
             dfs <- diag(fs)
             
-            COV <- COV + p * dfs %*% v %*% dfs + tfs %*% t(fs)            
+            COV <- COV + p * dfs %*% v %*% dfs + pfs %*% t(fs)            
         }
         
         if(var) { ## calculate variance
-            V <- V + tfs * fs * (1 + fvar)
+            V <- V + pfs * fs * (1 + fvar)
         }
     }
 
@@ -139,11 +137,29 @@ wkm <- function(times, data, param=list(start=0, alpha=1, var=TRUE, cov=FALSE, l
         logV <- Sa.log^2 * V
     }
 
-    obj <- list(times=times, alpha=alpha, start=start, p=P, S=S^alpha, COV=COV, logCOV=logCOV, logV=logV, V=V, n.atrisk=n.atrisk)
+    obj <- list(times=times, alpha=alpha, p=P, S=S^alpha, COV=COV, logCOV=logCOV, logV=logV, V=V, n.atrisk=n.atrisk)
     class(obj) <- "wkm"
     obj
 }
 
+## calculate diag(x) %*% A %*% diag(x)
+matrixProd <- function(A, x) sweep(sweep(A, MARGIN=2, STATS=x, FUN="*"), MARGIN=1, STATS=x, FUN="*")
+
+## same as matrix(x, nrow=length(x), ncol=length(x), byrow=FALSE)
+vectorToMatrixByCol <- function(x) {
+    n <- length(x)
+    dim(x) <- c(n, 1)
+    x[, rep.int(1, n)]
+}
+
+##v <- matrix(fvar, nrow=n.times, ncol=n.times, byrow=FALSE)
+
+f <- function(fvar, n.times) {
+    v <- fvar
+    dim(v) <- c(n.times, 1)
+    v <- v[, rep.int(1, n.times)]
+}
+            
 
 ################################################
 ### WKM with time-dependent discrete covariate
