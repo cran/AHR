@@ -1,4 +1,4 @@
-564e701b50a82fe21d41aeb1fee3030b *DESCRIPTION
+228dcba9f65534246bd5a4cb9dcdd1f5 *DESCRIPTION
 0903386ca5a2b44955c45303cf60d516 *NAMESPACE
 b199a28d74c07caa75f2006c74a27005 *NEWS.md
 2e1138c3dc63a9234e06a9ab6f02bdbf *R/AHR-package.R
@@ -25,7 +25,7 @@ dba15e1eb87ef482877b2dbe8cda1d87 *man/fastkm.Rd
 549adf42a7ebf1161634f13faade2423 *man/wkm.Rd
 d819c57a45e01c4ff4ad5458801c0d1a *man/wkmCompareQuantiles.Rd
 6e47540c942f6d1e615147d494188499 *man/wkmQuantile.Rd
-dcb4acf52a1092996bcf99156c164b7a *src/Makevars
+7a24d677a4fa4befe675d8abba444201 *src/Makevars
 606d64fa561f1000382ce9d3113456ea *src/Makevars.win
 ce1f3fb8377ab6272c9f67a33271c762 *src/prodlim.cpp
 1bfbde49c10f2e635ba92693c2f1109a *src/prodlim.h
