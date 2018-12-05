@@ -4,8 +4,8 @@
 \alias{wkm}
 \title{wkm}
 \usage{
-wkm(times, data, param = list(alpha = 1, var = TRUE, cov = FALSE, left.limit =
-  FALSE, rr.subset = rep(TRUE, nrow(data))), formula = NULL)
+wkm(times, data, param = list(alpha = 1, var = TRUE, cov = FALSE,
+  left.limit = FALSE, rr.subset = rep(TRUE, nrow(data))), formula = NULL)
 }
 \arguments{
 \item{times}{a vector of evaluation times}
@@ -38,4 +38,3 @@ of a right-continuous estimate (default). If a logical vector \code{rr.subset} i
 \references{
 S.~Murray and A.~A. Tsiatis. Nonparametric survival estimation using prognostic longitudinal covariates. \emph{Biometrics}, 52(1):137--151, Mar. 1996.
 }
-

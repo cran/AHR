@@ -4,8 +4,8 @@
 \alias{fastkm}
 \title{fastkm}
 \usage{
-fastkm(time, status, ltrunc = rep.int(0, length(time)), left.limit = FALSE,
-  eval = time)
+fastkm(time, status, ltrunc = rep.int(0, length(time)),
+  left.limit = FALSE, eval = time)
 }
 \arguments{
 \item{time}{vector of right-censored survival times}
@@ -44,4 +44,3 @@ f(fit$time)
 \seealso{
 \code{\link{survfit}} and \code{\link[prodlim]{prodlim}}
 }
-
